@@ -30,7 +30,7 @@ function Feedback() {
       <div>
         <h3 className="text-xl font-semibold">Overall Score</h3>
         <p className="text-lg text-blue-600 font-bold">
-          {feedback.overallScore} / 5
+          {feedback.overallScore} / 10
         </p>
       </div>
 

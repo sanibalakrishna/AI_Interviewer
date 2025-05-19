@@ -1,6 +1,10 @@
 import { useEffect, useState, useContext, useRef } from "react";
+import SpeechRecognition, {
+  useSpeechRecognition,
+} from "react-speech-recognition";
 import InterviewContext from "../../context/InterviewContext";
 import Spinner from "../layout/Spinner";
+import { useNavigate } from "react-router-dom";
 
 function ChatInterface({ interviewId }) {
   const {
@@ -11,17 +15,37 @@ function ChatInterface({ interviewId }) {
     sending,
     error,
     end,
+    feedback,
+    setFeedback,
   } = useContext(InterviewContext);
+  const navigate = useNavigate();
 
   const [input, setInput] = useState("");
-  const [feedback, setFeedback] = useState(null);
   const chatEndRef = useRef(null);
+
+  const {
+    transcript,
+    listening,
+    resetTranscript,
+    browserSupportsSpeechRecognition,
+  } = useSpeechRecognition();
 
   const interviewerQuestionsCount = messages.filter(
     (msg) => msg.sender === "ai"
   ).length;
 
   const isInterviewEnded = interviewerQuestionsCount >= 10;
+
+  // Text-to-Speech for AI messages
+  useEffect(() => {
+    if (messages.length === 0) return;
+
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage.sender === "ai") {
+      const utterance = new SpeechSynthesisUtterance(lastMessage.text);
+      window.speechSynthesis.speak(utterance);
+    }
+  }, [messages]);
 
   // Auto end interview after 10th question
   useEffect(() => {
@@ -30,6 +54,7 @@ function ChatInterface({ interviewId }) {
         try {
           const feedbackResponse = await end(interviewId);
           setFeedback(feedbackResponse);
+          navigate("/");
         } catch (err) {
           console.error("Failed to end interview:", err);
         }
@@ -50,6 +75,7 @@ function ChatInterface({ interviewId }) {
     if (!input.trim() || isInterviewEnded) return;
     await sendMessage(interviewId, input.trim());
     setInput("");
+    resetTranscript();
   };
 
   const handleKeyDown = (e) => {
@@ -58,6 +84,20 @@ function ChatInterface({ interviewId }) {
       handleSend();
     }
   };
+
+  const handleMicClick = () => {
+    if (listening) {
+      SpeechRecognition.stopListening();
+      setInput(transcript);
+    } else {
+      resetTranscript();
+      SpeechRecognition.startListening({ continuous: true });
+    }
+  };
+
+  if (!browserSupportsSpeechRecognition) {
+    return <span>Your browser doesn't support speech recognition.</span>;
+  }
 
   if (loadingMessages) return <Spinner />;
   if (error) return <p className="text-red-500">{error}</p>;
@@ -83,7 +123,10 @@ function ChatInterface({ interviewId }) {
             Interview completed. Thank you for your responses.
             {feedback && (
               <div className="mt-2 text-gray-800">
-                <strong>Feedback:</strong> {feedback}
+                <strong>Feedback:</strong>{" "}
+                {typeof feedback === "string"
+                  ? feedback
+                  : feedback.detailedFeedback}
               </div>
             )}
           </div>
@@ -96,15 +139,24 @@ function ChatInterface({ interviewId }) {
           <textarea
             className="flex-1 border p-2 rounded resize-none"
             rows={2}
-            placeholder="Type your answer..."
-            value={input}
+            placeholder="Type or speak your answer..."
+            value={input || transcript}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
           />
           <button
+            className={`px-3 py-2 rounded ${
+              listening ? "bg-red-500" : "bg-gray-200"
+            }`}
+            onClick={handleMicClick}
+            title={listening ? "Stop recording" : "Start recording"}
+          >
+            🎤
+          </button>
+          <button
             className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50"
             onClick={handleSend}
-            disabled={sending || !input.trim()}
+            disabled={sending || (!input.trim() && !transcript.trim())}
           >
             Send
           </button>

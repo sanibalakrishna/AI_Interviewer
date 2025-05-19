@@ -17,6 +17,7 @@
     "react-dom": "^19.1.0",
     "react-dropzone": "^14.3.8",
     "react-router-dom": "^7.6.0",
+    "react-speech-recognition": "^4.0.1",
     "tailwindcss": "^4.1.7"
   },
   "devDependencies": {
