@@ -15,7 +15,7 @@ function Header() {
     <header className="bg-primary text-white shadow">
       <nav className="container mx-auto px-4 py-4 flex justify-between items-center">
         <Link to="/" className="text-2xl font-bold">
-          Nora AI Interviewer
+          AI Interviewer
         </Link>
         <div className="space-x-4">
           {user ? (
